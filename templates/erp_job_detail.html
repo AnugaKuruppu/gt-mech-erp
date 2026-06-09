@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Production Console - {{ job_id }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+    <header class="bg-slate-950 border-b border-slate-800 p-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/" class="text-xs text-slate-400 hover:text-white transition">&larr; Return to Core ERP Controller Matrix</a>
+            <span class="font-mono text-xs bg-slate-900 text-slate-400 border border-slate-800 px-3 py-1 rounded">Target Machine Entity: {{ job.vehicle }}</span>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-2 space-y-6">
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="p-4 rounded-xl text-xs font-mono tracking-wide border {% if category == 'success' %} bg-emerald-950/80 text-emerald-400 border-emerald-800 {% else %} bg-red-950/80 text-red-400 border-red-800 {% endif %}">
+                            ⚡ NOTICE: {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-md font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-3 mb-4">1. Plant Engineering Tasks Checklist</h2>
+                
+                <form method="POST" class="space-y-6">
+                    <input type="hidden" name="action" value="update_tasks">
+                    <div class="space-y-2">
+                        {% for task in job.tasks %}
+                        <label class="flex items-center space-x-3 p-3 rounded-lg bg-slate-900 border border-slate-800/60 cursor-pointer hover:bg-slate-900 transition">
+                            <input type="checkbox" name="task_{{ loop.index0 }}" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-0" {% if task.done %}checked{% endif %}>
+                            <span class="text-sm {% if task.done %} line-through text-slate-500 {% else %} text-slate-200 {% endif %}">{{ task.desc }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div>
+                            <label class="text-xs uppercase font-bold tracking-wider text-slate-400 block">Logged Labor Operations Timeline</label>
+                            <span class="text-[10px] text-slate-500">Tracked duration on production floor</span>
+                        </div>
+                        <input type="number" step="0.1" name="hours_logged" value="{{ job.hours_logged }}" class="w-full bg-slate-950 border border-slate-800 text-emerald-400 font-mono font-bold text-right rounded p-2 focus:outline-none focus:border-slate-700" {% if job.status == 'Completed' %}disabled{% endif %}>
+                    </div>
+
+                    {% if job.status != 'Completed' %}
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-widest py-3 rounded-lg transition">
+                        Commit Progress Changes to Production Matrix
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-md font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-3 mb-4">2. Supply Chain Resource Allocations</h2>
+                {% if job.status != 'Completed' %}
+                <form method="POST" class="flex gap-4">
+                    <input type="hidden" name="action" value="allocate_part">
+                    <select name="sku" class="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none" required>
+                        <option value="">-- Request Material Release From Inventory --</option>
+                        {% for sku, item in inventory.items() %}
+                        <option value="{{ sku }}" {% if item.stock <= 0 %}disabled{% endif %}>{{ item.name }} (Available: {{ item.stock }})</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="qty" value="1" min="1" class="w-16 bg-slate-900 border border-slate-800 text-center font-bold text-xs text-white rounded">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase px-4 rounded transition">Provision</button>
+                </form>
+                {% else %}
+                <p class="text-xs font-mono text-slate-500">Allocations are locked. This tracking folder has been permanently archived.</p>
+                {% endif %}
+                
+                <div class="mt-4 space-y-2">
+                    {% for p in job.parts_used %}
+                    <div class="text-xs font-mono bg-slate-900 p-2 rounded border border-slate-800 flex justify-between">
+                        <span class="text-slate-400">{{ p.qty }}x {{ inventory[p.sku].name }}</span>
+                        <span class="text-slate-300">LKR {{ "{:,.2f}".format(p.qty * p.price) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl h-fit space-y-6">
+            <div class="text-center border-b border-slate-800 pb-4">
+                <h3 class="text-md font-black uppercase text-white tracking-widest">Enterprise Valuation Invoice</h3>
+                <p class="text-[10px] text-slate-500 font-mono">Real-time Accounting Ledger Stream</p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div class="flex justify-between border-b border-slate-900 pb-2">
+                    <span class="text-slate-500">Material Cost Summary</span>
+                    <span class="font-mono text-slate-300">LKR {{ "{:,.2f}".format(parts_cost) }}</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-900 pb-2">
+                    <span class="text-slate-500">Calculated Operating Labor Expense</span>
+                    <span class="font-mono text-slate-300">LKR {{ "{:,.2f}".format(labor_cost) }}</span>
+                </div>
+                <div class="flex justify-between pt-2">
+                    <span class="font-bold text-slate-200">Total Structural Settlement Asset</span>
+                    <span class="font-mono font-black text-emerald-400 text-sm">LKR {{ "{:,.2f}".format(total_estimation) }}</span>
+                </div>
+            </div>
+
+            {% if job.status != 'Completed' %}
+            <form action="/billing/invoice/{{ job_id }}" method="POST">
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-widest py-3 rounded-lg shadow-lg shadow-emerald-950/20 transition">
+                    Execute Ledger Posting & Close File
+                </button>
+            </form>
+            {% else %}
+            <div class="bg-slate-900 border border-emerald-900/30 text-emerald-400 text-xs text-center font-mono py-3 rounded-lg">
+                ✔ Transaction Posted & Financial Period Settled.
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</body>
+</html>

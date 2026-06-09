@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enterprise Resource Control Matrix</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+    <header class="border-b border-slate-800 bg-slate-950 p-6 shadow-2xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black uppercase tracking-wider text-white">Apex Mechanics Enterprise</h1>
+                <p class="text-xs text-emerald-400 font-mono">Unified Global Core ERP System • Production Standard v5.0</p>
+            </div>
+            <div class="bg-slate-900 px-4 py-2 rounded-lg border border-slate-800 text-right">
+                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-widest">Global Master Audit Log</span>
+                <span class="text-xs font-mono text-slate-200">Reconciled Clean • Database: Connected</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-4 rounded-xl text-xs font-mono tracking-wide border {% if category == 'success' %} bg-emerald-950/80 text-emerald-400 border-emerald-800 {% else %} bg-red-950/80 text-red-400 border-red-800 {% endif %}">
+                        ⚡ SYSTEM NOTICE: {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">General Ledger Liquid Asset (10100)</span>
+                <span class="text-2xl font-black font-mono text-emerald-400">LKR {{ "{:,.2f}".format(cash) }}</span>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Inventory Capitalization Value (12000)</span>
+                <span class="text-2xl font-black font-mono text-blue-400">LKR {{ "{:,.2f}".format(assets) }}</span>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Gross Realized Profits Ledger (40000)</span>
+                <span class="text-2xl font-black font-mono text-purple-400">LKR {{ "{:,.2f}".format(revenue) }}</span>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Active Plant Floors Queue</span>
+                <span class="text-2xl font-black font-mono text-amber-400">{{ active_jobs }} Jobs Active</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">Operations & Job Production Management</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead>
+                                <tr class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-900 border-b border-slate-800">
+                                    <th class="p-3">Reference ID</th>
+                                    <th class="p-3">Asset Target</th>
+                                    <th class="p-3">Staff Resource</th>
+                                    <th class="p-3">Operational Status</th>
+                                    <th class="p-3 text-right">Execution</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-900">
+                                {% for id, job in jobs.items() %}
+                                <tr class="hover:bg-slate-900/50">
+                                    <td class="p-3 font-mono font-bold text-blue-400">{{ id }}</td>
+                                    <td class="p-3 font-mono text-xs">{{ job.vehicle }}</td>
+                                    <td class="p-3 text-xs">
+                                        {% if employees[job.technician_id] %}
+                                            {{ employees[job.technician_id]['name'] }}
+                                        {% else %}
+                                            Unassigned Resource
+                                        {% endif %}
+                                    </td>
+                                    <td class="p-3">
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {% if job.status=='Completed' %} bg-emerald-950 text-emerald-400 border border-emerald-800 {% else %} bg-amber-950 text-amber-400 border border-amber-800 {% endif %}">
+                                            {{ job.status }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-right">
+                                        <a href="/production/job/{{ id }}" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-3 py-1.5 rounded transition">Access Console</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">Live Balanced Ledger Entry Streams</h2>
+                    <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
+                        {% if not journal_entries %}
+                        <p class="text-xs font-mono text-slate-500 text-center py-4">Waiting on transaction pipeline generation sequences...</p>
+                        {% else %}
+                            {% for entry in journal_entries %}
+                            <div class="p-2 border-b border-slate-900 font-mono text-[11px] flex justify-between items-center bg-slate-900/30 rounded mb-1">
+                                <div>
+                                    <span class="text-slate-500">[{{ entry.timestamp }}]</span>
+                                    <strong class="text-blue-400 font-bold ml-1">{{ entry.reference }}</strong>
+                                    <p class="text-slate-400 text-[10px] mt-0.5">{{ entry.description }} (Account Code: {{ entry.account_code }})</p>
+                                </div>
+                                <div class="text-right">
+                                    {% if entry.debit > 0 %}
+                                    <span class="text-emerald-400 font-bold">DR: LKR {{ "{:,.2f}".format(entry.debit) }}</span>
+                                    {% else %}
+                                    <span class="text-purple-400 font-bold">CR: LKR {{ "{:,.2f}".format(entry.credit) }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-md font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">Real-Time Inventory Reserves</h2>
+                    <div class="space-y-3">
+                        {% for sku, item in inventory.items() %}
+                        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-200">{{ item.name }}</h4>
+                                <span class="text-[10px] font-mono text-slate-500">{{ sku }} • Price: LKR {{ "{:,.2f}".format(item.price) }}</span>
+                            </div>
+                            <span class="text-xs font-mono font-bold px-2 py-1 rounded {% if item.stock <= item.reorder %} bg-red-950 text-red-400 border border-red-800 {% else %} bg-slate-800 text-slate-300 {% endif %}">
+                                Qty: {{ item.stock }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>
