@@ -10,10 +10,16 @@ app = Flask(__name__, template_folder='../templates')
 app.secret_key = os.environ.get("SECRET_KEY", "free_forever_enterprise_secret_token_2026")
 
 try:
-    # Read database URL from environment variables; default to safe serverless in-memory simulation fallback
-    db_url = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
-    if db_url and db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    # Read database URL and apply a strict string sanitation layer
+    raw_db_url = os.environ.get("DATABASE_URL", "").strip()
+    
+    # If the environment variable is completely empty or blank, fallback to safe memory arrays
+    if not raw_db_url:
+        db_url = "sqlite:///:memory:"
+    else:
+        db_url = raw_db_url
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
 
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"pool_pre_ping": True, "pool_recycle": 280}
