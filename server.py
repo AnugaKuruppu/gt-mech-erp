@@ -13,6 +13,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:/
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
 
+# Serverless Connection Pooling Optimization
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -114,6 +119,13 @@ def execute_double_entry(description, reference, movements):
 
 @app.route('/')
 def global_dashboard():
+    # Defensive setup check to confirm database tables are generated on fly
+    try:
+        db.create_all()
+        seed_database_if_empty()
+    except Exception:
+        pass
+
     cash_acc = Account.query.get(10100)
     rev_acc = Account.query.get(40000)
     
@@ -213,9 +225,10 @@ def finalize_and_invoice_job(job_id):
 
     return redirect(url_for('global_dashboard'))
 
-# Dynamic Schema Deployment Configuration hooks for Vercel Serverless
-with app.app_context():
-    db.create_all()
+# ==============================================================================
+# SECURE ATOMIC SEEDING LOGIC
+# ==============================================================================
+def seed_database_if_empty():
     if Employee.query.count() == 0:
         db.session.add(Employee(id="EMP001", name="Kamal Perera", role="Master Technician", hourly_rate=750.00))
         db.session.add(Employee(id="EMP002", name="Suresh Silva", role="Junior Mechanic", hourly_rate=450.00))
@@ -236,4 +249,7 @@ with app.app_context():
         db.session.commit()
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        seed_database_if_empty()
     app.run(debug=True, port=8000)
