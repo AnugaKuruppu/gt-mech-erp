@@ -5,11 +5,11 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# --- SECURE ENTERPRISE CONFIGURATION ---
-# Uses environment variables in the cloud, falls back to a safe local SQLite file for testing
-app.secret_key = os.environ.get("SECRET_KEY", "enterprise_secure_erp_token_production")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///erp_production.db")
-# Fix for Heroku/Render postgres:// vs postgresql:// protocol strings
+# --- ENTERPRISE ZERO-COST CONFIGURATION ---
+app.secret_key = os.environ.get("SECRET_KEY", "free_forever_enterprise_secret_token_2026")
+
+# Automatically uses Supabase PostgreSQL in production, falls back to local SQLite if offline
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///erp_free_tier.db")
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
 
@@ -17,7 +17,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==============================================================================
-# PERMANENT RELATIONAL DATABASE SCHEMAS
+# DATABASE BLUEPRINTS (RELATIONAL DATA STORAGE)
 # ==============================================================================
 
 class Employee(db.Model):
@@ -83,7 +83,7 @@ class AllocatedPart(db.Model):
     item_details = db.relationship('InventoryItem')
 
 # ==============================================================================
-# FINANCIAL DOUBLE-ENTRY TRANSACTIONS LEDGER CORE
+# RECONCILIATION ENGINE (DOUBLE-ENTRY AUDIT CORRECTIONS)
 # ==============================================================================
 
 def execute_double_entry(description, reference, movements):
@@ -91,7 +91,7 @@ def execute_double_entry(description, reference, movements):
     total_credits = sum(m[2] for m in movements)
     
     if abs(total_debits - total_credits) > 0.001:
-        raise ValueError(f"Accounting Matrix Mismatch! Debits ({total_debits}) must equal Credits ({total_credits}).")
+        raise ValueError(f"Ledger Imbalance! Debits must equal Credits exactly.")
         
     for code, debit, credit in movements:
         acc = Account.query.get(code)
@@ -109,12 +109,11 @@ def execute_double_entry(description, reference, movements):
             db.session.add(entry)
 
 # ==============================================================================
-# APP ROUTING INTERFACES
+# WEB MIDDLEWARE ROUTING
 # ==============================================================================
 
 @app.route('/')
 def global_dashboard():
-    # Structural calculations from live database tables
     cash_acc = Account.query.get(10100)
     rev_acc = Account.query.get(40000)
     
@@ -139,7 +138,7 @@ def global_dashboard():
 @app.route('/production/job/<job_id>', methods=['GET', 'POST'])
 def view_job_card(job_id):
     job = JobCard.query.get(job_id)
-    if not job: return "Job Card Instance Missing", 404
+    if not job: return "Target System Reference Missing", 404
     
     if request.method == 'POST':
         action = request.form.get('action')
@@ -148,7 +147,7 @@ def view_job_card(job_id):
                 task.done = request.form.get(f"task_{idx}") == "on"
             job.hours_logged = float(request.form.get("hours_logged", job.hours_logged))
             db.session.commit()
-            flash("Job operations layout successfully stored.", "success")
+            flash("Production floor operation cards processed.", "success")
             
         elif action == 'allocate_part':
             sku = request.form.get('sku')
@@ -159,17 +158,15 @@ def view_job_card(job_id):
                 allocation = AllocatedPart(job_id=job_id, sku=sku, qty=qty, price=part.price)
                 db.session.add(allocation)
                 db.session.commit()
-                flash(f"Material allocation finalized: {qty} units of {sku}.", "success")
+                flash(f"Material released from stores: {qty} units of {sku}.", "success")
             else:
-                flash("Insufficient physical stock units to provision request.", "danger")
+                flash("Insufficient physical quantities available to process release.", "danger")
                 
         return redirect(url_for('view_job_card', job_id=job_id))
 
-    # Calculate live pipeline financial statistics
     parts_cost = sum(p.qty * p.price for p in job.parts_used)
     tech = Employee.query.get(job.technician_id)
     labor_cost = job.hours_logged * (tech.hourly_rate if tech else 0.0)
-    
     inventory_list = {i.sku: i for i in InventoryItem.query.all()}
     
     return render_template('erp_job_detail.html', job_id=job_id, job=job, 
@@ -181,7 +178,7 @@ def view_job_card(job_id):
 def finalize_and_invoice_job(job_id):
     job = JobCard.query.get(job_id)
     if not job or job.status == "Completed":
-        return "Invalid operational state validation failure.", 400
+        return "Operational action locked.", 400
         
     tech = Employee.query.get(job.technician_id)
     labor_cost = job.hours_logged * (tech.hourly_rate if tech else 0.0)
@@ -196,7 +193,7 @@ def finalize_and_invoice_job(job_id):
     
     try:
         execute_double_entry(
-            description=f"Settlement of repair services rendered for vehicle {job.vehicle}",
+            description=f"Automated settlement run for work card {job_id} / Vehicle {job.vehicle}",
             reference=f"INV-{job_id}",
             movements=[
                 (10100, grand_total, 0.00),
@@ -209,48 +206,34 @@ def finalize_and_invoice_job(job_id):
         )
         job.status = "Completed"
         db.session.commit()
-        flash(f"System Invoice generated cleanly. Financial Ledgers updated and balanced.", "success")
+        flash(f"Ledger balances updated successfully. Invoicing cycle ended.", "success")
     except ValueError as e:
         db.session.rollback()
-        flash(f"Ledger Reconciliation Error Alert: {str(e)}", "danger")
+        flash(f"Critical ledger failure: {str(e)}", "danger")
 
     return redirect(url_for('global_dashboard'))
 
-# ==============================================================================
-# SYSTEM DATABASE INITIALIZATION UTILITY
-# ==============================================================================
-@app.before_all
-def init_enterprise_database():
-    """Initializes schema blueprints and base ledger values if empty."""
+# Dynamic Schema Deployment Configuration hooks for Vercel Serverless
+with app.app_context():
     db.create_all()
     if Employee.query.count() == 0:
-        # Populate Default Staff Resources
         db.session.add(Employee(id="EMP001", name="Kamal Perera", role="Master Technician", hourly_rate=750.00))
         db.session.add(Employee(id="EMP002", name="Suresh Silva", role="Junior Mechanic", hourly_rate=450.00))
-        
-        # Populate Default Balances inside Chart of Accounts Matrix
         db.session.add(Account(code=10100, name="Cash & Bank Accounts", account_type="Asset", balance=1250000.00))
         db.session.add(Account(code=12000, name="Inventory Asset Account", account_type="Asset", balance=450000.00))
         db.session.add(Account(code=21000, name="Accounts Payable (Suppliers)", account_type="Liability", balance=0.00))
         db.session.add(Account(code=40000, name="Workshop Revenue", account_type="Revenue", balance=0.00))
         db.session.add(Account(code=50000, name="Cost of Goods Sold (COGS)", account_type="Expense", balance=0.00))
         db.session.add(Account(code=51000, name="Technician Labor Expenses", account_type="Expense", balance=0.00))
-        
-        # Provision Stock Storage Levels
         db.session.add(InventoryItem(sku="SKU-ENG-OIL", name="Fully Synthetic Engine Oil 5W-30", stock=45, cost=6200.00, price=8500.00))
         db.session.add(InventoryItem(sku="SKU-BRK-PAD", name="Ceramic Front Brake Pads Set", stock=8, cost=4100.00, price=6800.00))
-        
-        # Issue Launch Job Order
         initial_job = JobCard(id="JOB-2026-0001", vehicle="WP CAD-9922", technician_id="EMP001", hours_logged=2.5)
         db.session.add(initial_job)
         db.session.flush()
-        
         db.session.add(JobTask(job_id=initial_job.id, desc="Full Engine Flushing & Synthetic Oil Replacement", done=True))
         db.session.add(JobTask(job_id=initial_job.id, desc="Calibrate Front & Rear Brake Discs", done=False))
         db.session.add(AllocatedPart(job_id=initial_job.id, sku="SKU-ENG-OIL", qty=1, price=8500.00))
-        
         db.session.commit()
 
 if __name__ == '__main__':
-    # Local fallback port configurations
     app.run(debug=True, port=8000)
