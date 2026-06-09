@@ -8,8 +8,8 @@ app = Flask(__name__)
 # --- SECURE CONFIGURATION ENGINE ---
 app.secret_key = os.environ.get("SECRET_KEY", "free_forever_enterprise_secret_token_2026")
 
-# Read database URL from environment variables; default to safe local SQLite fallback
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///erp_free_tier.db")
+# Fallback specifically uses /tmp/ because Vercel's root filesystem is strictly Read-Only
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:////tmp/erp_free_tier.db")
 if app.config['SQLALCHEMY_DATABASE_URI'] and app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
 
@@ -91,26 +91,22 @@ class AllocatedPart(db.Model):
 # SECURE ATOMIC SEEDING LOGIC
 # ==============================================================================
 def verify_and_seed_database():
-    """Safely checks and initializes database tables on demand without crashing serverless boots."""
+    """Safely checks and initializes database tables on demand without crashing."""
     db.create_all()
     if Employee.query.count() == 0:
         db.session.add(Employee(id="EMP001", name="Kamal Perera", role="Master Technician", hourly_rate=750.00))
         db.session.add(Employee(id="EMP002", name="Suresh Silva", role="Junior Mechanic", hourly_rate=450.00))
-        
         db.session.add(Account(code=10100, name="Cash & Bank Accounts", account_type="Asset", balance=1250000.00))
         db.session.add(Account(code=12000, name="Inventory Asset Account", account_type="Asset", balance=450000.00))
         db.session.add(Account(code=21000, name="Accounts Payable (Suppliers)", account_type="Liability", balance=0.00))
         db.session.add(Account(code=40000, name="Workshop Revenue", account_type="Revenue", balance=0.00))
         db.session.add(Account(code=50000, name="Cost of Goods Sold (COGS)", account_type="Expense", balance=0.00))
         db.session.add(Account(code=51000, name="Technician Labor Expenses", account_type="Expense", balance=0.00))
-        
         db.session.add(InventoryItem(sku="SKU-ENG-OIL", name="Fully Synthetic Engine Oil 5W-30", stock=45, cost=6200.00, price=8500.00))
         db.session.add(InventoryItem(sku="SKU-BRK-PAD", name="Ceramic Front Brake Pads Set", stock=8, cost=4100.00, price=6800.00))
-        
         initial_job = JobCard(id="JOB-2026-0001", vehicle="WP CAD-9922", technician_id="EMP001", hours_logged=2.5)
         db.session.add(initial_job)
         db.session.flush()
-        
         db.session.add(JobTask(job_id=initial_job.id, desc="Full Engine Flushing & Synthetic Oil Replacement", done=True))
         db.session.add(JobTask(job_id=initial_job.id, desc="Calibrate Front & Rear Brake Discs", done=False))
         db.session.add(AllocatedPart(job_id=initial_job.id, sku="SKU-ENG-OIL", qty=1, price=8500.00))
@@ -135,31 +131,47 @@ def execute_double_entry(description, reference, movements):
 
 @app.route('/')
 def global_dashboard():
-    # Safe on-demand serverless init trigger
     try:
+        # Safe on-demand serverless init trigger
         verify_and_seed_database()
+
+        cash_acc = Account.query.get(10100)
+        rev_acc = Account.query.get(40000)
+        total_cash = cash_acc.balance if cash_acc else 0.0
+        total_revenue = rev_acc.balance if rev_acc else 0.0
+        
+        inventory_items = InventoryItem.query.all()
+        asset_valuation = sum(i.stock * i.cost for i in inventory_items)
+        active_jobs_count = JobCard.query.filter(JobCard.status != "Completed").count()
+        
+        all_jobs = {j.id: j for j in JobCard.query.all()}
+        all_inventory = {i.sku: i for i in inventory_items}
+        all_accounts = {a.code: a for a in Account.query.all()}
+        all_employees = {e.id: e for e in Employee.query.all()}
+        journal_stream = JournalEntry.query.order_by(JournalEntry.id.desc()).all()
+
+        return render_template('erp_dashboard.html', 
+                               cash=total_cash, assets=asset_valuation, revenue=total_revenue,
+                               active_jobs=active_jobs_count, jobs=all_jobs, inventory=all_inventory,
+                               accounts=all_accounts, employees=all_employees, journal_entries=journal_stream)
+                               
     except Exception as e:
-        print(f"Database sync warning: {e}")
-
-    cash_acc = Account.query.get(10100)
-    rev_acc = Account.query.get(40000)
-    total_cash = cash_acc.balance if cash_acc else 0.0
-    total_revenue = rev_acc.balance if rev_acc else 0.0
-    
-    inventory_items = InventoryItem.query.all()
-    asset_valuation = sum(i.stock * i.cost for i in inventory_items)
-    active_jobs_count = JobCard.query.filter(JobCard.status != "Completed").count()
-    
-    all_jobs = {j.id: j for j in JobCard.query.all()}
-    all_inventory = {i.sku: i for i in inventory_items}
-    all_accounts = {a.code: a for a in Account.query.all()}
-    all_employees = {e.id: e for e in Employee.query.all()}
-    journal_stream = JournalEntry.query.order_by(JournalEntry.id.desc()).all()
-
-    return render_template('erp_dashboard.html', 
-                           cash=total_cash, assets=asset_valuation, revenue=total_revenue,
-                           active_jobs=active_jobs_count, jobs=all_jobs, inventory=all_inventory,
-                           accounts=all_accounts, employees=all_employees, journal_entries=journal_stream)
+        # BULLETPROOF FALLBACK SCREEN IF DATABASE IS BROKEN OR MISSING
+        return f"""
+        <div style="font-family: monospace; background: #111; color: #ff5555; padding: 2rem; border-radius: 10px; max-width: 800px; margin: 2rem auto; border: 1px solid #333;">
+            <h2 style="color: #ff3333;">⚠️ Database Connection Failed</h2>
+            <p style="color: #ccc;">Vercel tried to connect to your Supabase database but failed. This is almost always because the <b>DATABASE_URL</b> environment variable is missing or incorrect in your Vercel settings.</p>
+            <div style="background: #000; padding: 1rem; border-radius: 5px; color: #ffaa00; word-wrap: break-word;"><b>Error Details:</b> {str(e)}</div>
+            <h3 style="color: #fff; margin-top: 2rem;">How to fix it right now:</h3>
+            <ol style="color: #aaa; line-height: 1.8;">
+                <li>Go to your <b>Vercel Dashboard</b> -> Click your project -> <b>Settings</b>.</li>
+                <li>Click on <b>Environment Variables</b> on the left menu.</li>
+                <li>Add a new variable: <br>Key: <b style="color: #fff;">DATABASE_URL</b><br>Value: <b style="color: #fff;">[Paste your exact Supabase Connection String here]</b></li>
+                <li>Click <b>Save</b>.</li>
+                <li>Click the <b>Deployments</b> tab at the top, click the three dots on your latest deployment, and click <b>Redeploy</b>.</li>
+            </ol>
+        </div>
+        """
 
 @app.route('/production/job/<job_id>', methods=['GET', 'POST'])
 def view_job_card(job_id):
@@ -240,7 +252,6 @@ def finalize_and_invoice_job(job_id):
     return redirect(url_for('global_dashboard'))
 
 if __name__ == '__main__':
-    # Used strictly for local debugging routines
     with app.app_context():
         verify_and_seed_database()
     app.run(debug=True, port=8000)
