@@ -5,18 +5,18 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# --- ENTERPRISE ZERO-COST CONFIGURATION ---
+# --- SECURE CONFIGURATION ENGINE ---
 app.secret_key = os.environ.get("SECRET_KEY", "free_forever_enterprise_secret_token_2026")
 
-# Automatically uses Supabase PostgreSQL in production, falls back to local SQLite if offline
+# Read database URL from environment variables; default to safe local SQLite fallback
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///erp_free_tier.db")
-if app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
+if app.config['SQLALCHEMY_DATABASE_URI'] and app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
 
-# Serverless Connection Pooling Optimization
+# Essential optimization for serverless database connection pooling
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
-    "pool_recycle": 300,
+    "pool_recycle": 280,
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -88,29 +88,45 @@ class AllocatedPart(db.Model):
     item_details = db.relationship('InventoryItem')
 
 # ==============================================================================
-# RECONCILIATION ENGINE (DOUBLE-ENTRY AUDIT CORRECTIONS)
+# SECURE ATOMIC SEEDING LOGIC
 # ==============================================================================
+def verify_and_seed_database():
+    """Safely checks and initializes database tables on demand without crashing serverless boots."""
+    db.create_all()
+    if Employee.query.count() == 0:
+        db.session.add(Employee(id="EMP001", name="Kamal Perera", role="Master Technician", hourly_rate=750.00))
+        db.session.add(Employee(id="EMP002", name="Suresh Silva", role="Junior Mechanic", hourly_rate=450.00))
+        
+        db.session.add(Account(code=10100, name="Cash & Bank Accounts", account_type="Asset", balance=1250000.00))
+        db.session.add(Account(code=12000, name="Inventory Asset Account", account_type="Asset", balance=450000.00))
+        db.session.add(Account(code=21000, name="Accounts Payable (Suppliers)", account_type="Liability", balance=0.00))
+        db.session.add(Account(code=40000, name="Workshop Revenue", account_type="Revenue", balance=0.00))
+        db.session.add(Account(code=50000, name="Cost of Goods Sold (COGS)", account_type="Expense", balance=0.00))
+        db.session.add(Account(code=51000, name="Technician Labor Expenses", account_type="Expense", balance=0.00))
+        
+        db.session.add(InventoryItem(sku="SKU-ENG-OIL", name="Fully Synthetic Engine Oil 5W-30", stock=45, cost=6200.00, price=8500.00))
+        db.session.add(InventoryItem(sku="SKU-BRK-PAD", name="Ceramic Front Brake Pads Set", stock=8, cost=4100.00, price=6800.00))
+        
+        initial_job = JobCard(id="JOB-2026-0001", vehicle="WP CAD-9922", technician_id="EMP001", hours_logged=2.5)
+        db.session.add(initial_job)
+        db.session.flush()
+        
+        db.session.add(JobTask(job_id=initial_job.id, desc="Full Engine Flushing & Synthetic Oil Replacement", done=True))
+        db.session.add(JobTask(job_id=initial_job.id, desc="Calibrate Front & Rear Brake Discs", done=False))
+        db.session.add(AllocatedPart(job_id=initial_job.id, sku="SKU-ENG-OIL", qty=1, price=8500.00))
+        db.session.commit()
 
 def execute_double_entry(description, reference, movements):
     total_debits = sum(m[1] for m in movements)
     total_credits = sum(m[2] for m in movements)
-    
     if abs(total_debits - total_credits) > 0.001:
-        raise ValueError(f"Ledger Imbalance! Debits must equal Credits exactly.")
-        
+        raise ValueError("Ledger Imbalance! Debits must equal Credits exactly.")
     for code, debit, credit in movements:
         acc = Account.query.get(code)
         if acc:
             acc.balance += debit
             acc.balance -= credit
-            
-            entry = JournalEntry(
-                reference=reference,
-                description=description,
-                account_code=code,
-                debit=debit,
-                credit=credit
-            )
+            entry = JournalEntry(reference=reference, description=description, account_code=code, debit=debit, credit=credit)
             db.session.add(entry)
 
 # ==============================================================================
@@ -119,23 +135,21 @@ def execute_double_entry(description, reference, movements):
 
 @app.route('/')
 def global_dashboard():
-    # Defensive setup check to confirm database tables are generated on fly
+    # Safe on-demand serverless init trigger
     try:
-        db.create_all()
-        seed_database_if_empty()
-    except Exception:
-        pass
+        verify_and_seed_database()
+    except Exception as e:
+        print(f"Database sync warning: {e}")
 
     cash_acc = Account.query.get(10100)
     rev_acc = Account.query.get(40000)
-    
     total_cash = cash_acc.balance if cash_acc else 0.0
     total_revenue = rev_acc.balance if rev_acc else 0.0
     
     inventory_items = InventoryItem.query.all()
     asset_valuation = sum(i.stock * i.cost for i in inventory_items)
-    
     active_jobs_count = JobCard.query.filter(JobCard.status != "Completed").count()
+    
     all_jobs = {j.id: j for j in JobCard.query.all()}
     all_inventory = {i.sku: i for i in inventory_items}
     all_accounts = {a.code: a for a in Account.query.all()}
@@ -225,31 +239,8 @@ def finalize_and_invoice_job(job_id):
 
     return redirect(url_for('global_dashboard'))
 
-# ==============================================================================
-# SECURE ATOMIC SEEDING LOGIC
-# ==============================================================================
-def seed_database_if_empty():
-    if Employee.query.count() == 0:
-        db.session.add(Employee(id="EMP001", name="Kamal Perera", role="Master Technician", hourly_rate=750.00))
-        db.session.add(Employee(id="EMP002", name="Suresh Silva", role="Junior Mechanic", hourly_rate=450.00))
-        db.session.add(Account(code=10100, name="Cash & Bank Accounts", account_type="Asset", balance=1250000.00))
-        db.session.add(Account(code=12000, name="Inventory Asset Account", account_type="Asset", balance=450000.00))
-        db.session.add(Account(code=21000, name="Accounts Payable (Suppliers)", account_type="Liability", balance=0.00))
-        db.session.add(Account(code=40000, name="Workshop Revenue", account_type="Revenue", balance=0.00))
-        db.session.add(Account(code=50000, name="Cost of Goods Sold (COGS)", account_type="Expense", balance=0.00))
-        db.session.add(Account(code=51000, name="Technician Labor Expenses", account_type="Expense", balance=0.00))
-        db.session.add(InventoryItem(sku="SKU-ENG-OIL", name="Fully Synthetic Engine Oil 5W-30", stock=45, cost=6200.00, price=8500.00))
-        db.session.add(InventoryItem(sku="SKU-BRK-PAD", name="Ceramic Front Brake Pads Set", stock=8, cost=4100.00, price=6800.00))
-        initial_job = JobCard(id="JOB-2026-0001", vehicle="WP CAD-9922", technician_id="EMP001", hours_logged=2.5)
-        db.session.add(initial_job)
-        db.session.flush()
-        db.session.add(JobTask(job_id=initial_job.id, desc="Full Engine Flushing & Synthetic Oil Replacement", done=True))
-        db.session.add(JobTask(job_id=initial_job.id, desc="Calibrate Front & Rear Brake Discs", done=False))
-        db.session.add(AllocatedPart(job_id=initial_job.id, sku="SKU-ENG-OIL", qty=1, price=8500.00))
-        db.session.commit()
-
 if __name__ == '__main__':
+    # Used strictly for local debugging routines
     with app.app_context():
-        db.create_all()
-        seed_database_if_empty()
+        verify_and_seed_database()
     app.run(debug=True, port=8000)
