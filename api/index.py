@@ -6,9 +6,9 @@ import traceback
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 app = Flask(__name__, template_folder='../templates')
-app.secret_key = os.environ.get("SECRET_KEY", "free_forever_enterprise_secret_token_2026")
+app.secret_key = os.environ.get("SECRET_KEY", "gt_automech_production_vault_token_2026")
 
-# --- FIREBASE CONNECTIONS ENGINE INITIALIZATION ---
+# --- FIREBASE SECURE RUNTIME INITIALIZATION ---
 db = None
 firebase_error = None
 raw_env_check = os.environ.get("FIREBASE_CREDENTIALS", "NOT_FOUND_AT_ALL").strip()
@@ -37,17 +37,17 @@ try:
     db = firestore.client()
 
     # ==============================================================================
-    # AUTOMATED SYSTEM SEEDING SCRIPT
+    # AUTOMATED COLD-START ENTERPRISE DATA SEEDING
     # ==============================================================================
     def verify_and_seed_firebase():
         emp_ref = db.collection("employees")
         if len(list(emp_ref.limit(1).stream())) == 0:
+            # 1. Human Resources Seed
+            emp_ref.document("EMP001").set({"name": "Kamal Perera", "role": "Master Technician", "hourly_rate": 750.00, "status": "Active"})
+            emp_ref.document("EMP002").set({"name": "Suresh Silva", "role": "Junior Mechanic", "hourly_rate": 450.00, "status": "Active"})
+            emp_ref.document("EMP003").set({"name": "Anura Bandarage", "role": "Electrical Specialist", "hourly_rate": 650.00, "status": "Active"})
             
-            # Seed Staff Drivers
-            emp_ref.document("EMP001").set({"name": "Kamal Perera", "role": "Master Technician", "hourly_rate": 750.00})
-            emp_ref.document("EMP002").set({"name": "Suresh Silva", "role": "Junior Mechanic", "hourly_rate": 450.00})
-            
-            # Seed Financial Chart of Accounts
+            # 2. General Ledger Chart of Accounts Matrix
             acc_ref = db.collection("chart_of_accounts")
             acc_ref.document("10100").set({"name": "Cash & Bank Accounts", "account_type": "Asset", "balance": 1250000.00})
             acc_ref.document("12000").set({"name": "Inventory Asset Account", "account_type": "Asset", "balance": 450000.00})
@@ -56,16 +56,17 @@ try:
             acc_ref.document("50000").set({"name": "Cost of Goods Sold (COGS)", "account_type": "Expense", "balance": 0.00})
             acc_ref.document("51000").set({"name": "Technician Labor Expenses", "account_type": "Expense", "balance": 0.00})
             
-            # Seed Materials Inventory
+            # 3. Supply Chain Inventory Matrix
             inv_ref = db.collection("inventory")
-            inv_ref.document("SKU-ENG-OIL").set({"name": "Fully Synthetic Engine Oil 5W-30", "stock": 45, "reorder": 10, "cost": 6200.00, "price": 8500.00})
-            inv_ref.document("SKU-BRK-PAD").set({"name": "Ceramic Front Brake Pads Set", "stock": 8, "reorder": 5, "cost": 4100.00, "price": 6800.00})
+            inv_ref.document("SKU-ENG-OIL").set({"name": "Fully Synthetic Engine Oil 5W-30", "stock": 45, "reorder": 10, "cost": 6200.00, "price": 8500.00, "category": "Lubricants"})
+            inv_ref.document("SKU-BRK-PAD").set({"name": "Ceramic Front Brake Pads Set", "stock": 8, "reorder": 5, "cost": 4100.00, "price": 6800.00, "category": "Braking"})
+            inv_ref.document("SKU-FLT-AIR").set({"name": "Premium Air Filter Element", "stock": 15, "reorder": 5, "cost": 1800.00, "price": 3200.00, "category": "Filters"})
             
-            # Seed Core Vehicle Entity Registers
-            db.collection("customers").document("CUST-001").set({"name": "Mahela Jayawardene", "phone": "0777123456", "email": "mahela@cricket.lk"})
-            db.collection("vehicles").document("WP-CAD-9922").set({"customer_id": "CUST-001", "make": "Toyota", "model": "Prius", "year": 2018})
+            # 4. CRM Client & Vehicle Fleet Matrix
+            db.collection("customers").document("CUST001").set({"name": "Mahela Jayawardene", "phone": "0777123456", "email": "mahela@gt-automech.com"})
+            db.collection("vehicles").document("WP-CAD-9922").set({"customer_id": "CUST001", "make": "Toyota", "model": "Prius", "year": 2018, "vin": "NHW20-776152", "mileage": 142000})
             
-            # Seed Active Repair Orders Pipeline
+            # 5. Live Production Queue Repair Orders
             job_ref = db.collection("job_cards").document("JOB-2026-0001")
             job_ref.set({
                 "vehicle": "WP-CAD-9922",
@@ -75,7 +76,8 @@ try:
                 "hours_logged": 2.5,
                 "tasks": [
                     {"desc": "Full Engine Flushing & Synthetic Oil Replacement", "done": True},
-                    {"desc": "Calibrate Front & Rear Brake Discs", "done": False}
+                    {"desc": "Calibrate Front & Rear Brake Discs", "done": False},
+                    {"desc": "Perform High-Voltage Battery Health Diagnostics", "done": False}
                 ],
                 "parts_used": [
                     {"sku": "SKU-ENG-OIL", "qty": 1, "price": 8500.00}
@@ -86,13 +88,13 @@ except Exception as ex:
     firebase_error = traceback.format_exc()
 
 # ==============================================================================
-# FINANCIAL ATOMIC BALANCING PIPELINE ENGINE
+# BALANCED FINANCIAL TRANSACTION PIPELINE ENGINE
 # ==============================================================================
 def execute_double_entry(description, reference, movements):
     total_debits = sum(m[1] for m in movements)
     total_credits = sum(m[2] for m in movements)
     if abs(total_debits - total_credits) > 0.001:
-        raise ValueError("Ledger Imbalance Detected! Debits must equal Credits.")
+        raise ValueError("Ledger Imbalance Blocked! Debits must equal Credits exactly.")
     
     batch = db.batch()
     for code, debit, credit in movements:
@@ -114,7 +116,7 @@ def execute_double_entry(description, reference, movements):
     batch.commit()
 
 # ==============================================================================
-# WEB REQUEST MODULE ENDPOINTS
+# WEB MODULE ROUTING INTERFACES
 # ==============================================================================
 
 @app.route('/')
@@ -145,7 +147,7 @@ def view_job_card(job_id):
     if firebase_error: return render_recovery_screen(firebase_error, raw_env_check)
     job_ref = db.collection("job_cards").document(job_id)
     job_snap = job_ref.get()
-    if not job_snap.exists: return "Target System Reference Missing", 404
+    if not job_snap.exists: return "Target System Operational Reference Missing", 404
     job = job_snap.to_dict()
     
     if request.method == 'POST':
@@ -154,7 +156,7 @@ def view_job_card(job_id):
             updated_tasks = [{"desc": t["desc"], "done": request.form.get(f"task_{i}") == "on"} for i, t in enumerate(job.get("tasks", []))]
             hours = float(request.form.get("hours_logged", job.get("hours_logged", 0.0)))
             job_ref.update({"tasks": updated_tasks, "hours_logged": hours})
-            flash("Production floor operations logs successfully synced.", "success")
+            flash("Shop floor operations check sheets successfully synchronized.", "success")
             
         elif action == 'allocate_part':
             sku = request.form.get('sku')
@@ -167,9 +169,9 @@ def view_job_card(job_id):
                 curr_parts = job.get("parts_used", [])
                 curr_parts.append({"sku": sku, "qty": qty, "price": part_snap.to_dict()["price"]})
                 job_ref.update({"parts_used": curr_parts})
-                flash(f"Material released from storage: {qty} units of {sku}.", "success")
+                flash(f"Material released from stores: {qty} units of {sku}.", "success")
             else:
-                flash("Insufficient parts quantities available to complete allocation.", "danger")
+                flash("Allocation halted: Insufficient stock levels inside warehouse.", "danger")
         return redirect(url_for('view_job_card', job_id=job_id))
 
     inventory = {doc.id: doc.to_dict() for doc in db.collection("inventory").stream()}
@@ -187,7 +189,7 @@ def finalize_and_invoice_job(job_id):
     if firebase_error: return render_recovery_screen(firebase_error, raw_env_check)
     job_ref = db.collection("job_cards").document(job_id)
     job_snap = job_ref.get()
-    if not job_snap.exists or job_snap.to_dict().get("status") == "Completed": return "Action Locked.", 400
+    if not job_snap.exists or job_snap.to_dict().get("status") == "Completed": return "Action Forbidden.", 400
         
     job = job_snap.to_dict()
     tech_snap = db.collection("employees").document(job.get("technician_id", "")).get()
@@ -204,7 +206,7 @@ def finalize_and_invoice_job(job_id):
     
     try:
         execute_double_entry(
-            description=f"Automated core ledger settlement run for Job {job_id}",
+            description=f"Automated financial closeout execution run for Job Card {job_id}",
             reference=f"INV-{job_id}",
             movements=[
                 (10100, grand_total, 0.00), (40000, 0.00, grand_total),
@@ -213,14 +215,14 @@ def finalize_and_invoice_job(job_id):
             ]
         )
         job_ref.update({"status": "Completed"})
-        flash(f"Invoicing sequence completed. General balance sheets reconciled cleanly.", "success")
+        flash(f"Invoicing sequence completed. General ledgers re-balanced and file archived.", "success")
     except ValueError as e:
-        flash(f"Critical accounting block: {str(e)}", "danger")
+        flash(f"Critical ledger structure exception: {str(e)}", "danger")
     return redirect(url_for('global_dashboard'))
 
 def render_recovery_screen(stack_trace, current_env_state):
     safe_display = current_env_state[:30] + "..." if len(current_env_state) > 30 else current_env_state
-    return f"<h2>⚠️ CONFIGURATION CONTEXT EXCEPTION</h2><pre>{stack_trace}</pre><br><b>Read Check:</b> <code>{safe_display}</code>"
+    return f"<h2>⚠️ ENTERPRISE CONFIGURATION EXCEPTION</h2><pre>{stack_trace}</pre><br><b>Read Check:</b> <code>{safe_display}</code>"
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
