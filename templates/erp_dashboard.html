@@ -2,112 +2,258 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Production Console - {{ job_id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GT AutoMech ERP - Level 100 Master Matrix</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-    <header class="bg-slate-950 border-b border-slate-800 p-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <a href="/" class="text-xs text-slate-400 hover:text-white transition">&larr; Return to Dashboard</a>
-            <span class="font-mono text-xs bg-slate-900 text-slate-400 border border-slate-800 px-3 py-1 rounded">GT AutoMech Target: {{ job.vehicle }}</span>
+    <header class="border-b border-slate-800 bg-slate-950 p-6 shadow-2xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black uppercase tracking-wider text-white">GT AutoMech (PVT) Ltd</h1>
+                <p class="text-xs text-emerald-400 font-mono">100-Module Enterprise Ecosystem • Raigama, Bandaragama</p>
+            </div>
+            <div class="bg-slate-900 px-4 py-2 rounded-lg border border-slate-800 text-right">
+                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-widest">System Status</span>
+                <span class="text-xs font-mono text-emerald-400">✨ Level-100 Architecture Online</span>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2 space-y-6">
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="p-4 rounded-xl text-xs font-mono tracking-wide border {% if category == 'success' %} bg-emerald-950/80 text-emerald-400 border-emerald-800 {% else %} bg-red-950/80 text-red-400 border-red-800 {% endif %}">
-                            ⚡ {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
-                <h2 class="text-md font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-3 mb-4">1. Plant Engineering Checklist</h2>
-                
-                <form method="POST" class="space-y-6">
-                    <input type="hidden" name="action" value="update_tasks">
-                    <div class="space-y-2">
-                        {% for task in job.tasks %}
-                        <label class="flex items-center space-x-3 p-3 rounded-lg bg-slate-900 border border-slate-800/60 cursor-pointer hover:bg-slate-900 transition">
-                            <input type="checkbox" name="task_{{ loop.index0 }}" class="w-4 h-4 rounded border-slate-700 bg-slate-800 focus:ring-0" {% if task.done %}checked{% endif %}>
-                            <span class="text-sm {% if task.done %} line-through text-slate-500 {% else %} text-slate-200 {% endif %}">{{ task.desc }}</span>
-                        </label>
-                        {% endfor %}
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-4 rounded-xl text-xs font-mono tracking-wide border shadow-lg {% if category == 'success' %} bg-emerald-950/80 text-emerald-400 border-emerald-800 {% else %} bg-red-950/80 text-red-400 border-red-800 {% endif %}">
+                        ⚡ SYSTEM BROADCAST: {{ message }}
                     </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-slate-900 border border-slate-800 p-4 rounded-xl">
-                        <div>
-                            <label class="text-xs uppercase font-bold text-slate-400 block">Logged Hours</label>
-                        </div>
-                        <input type="number" step="0.1" name="hours_logged" value="{{ job.hours_logged }}" class="w-full bg-slate-950 border border-slate-800 text-emerald-400 font-mono font-bold text-right rounded p-2 focus:outline-none focus:border-slate-700" {% if job.status == 'Completed' %}disabled{% endif %}>
-                    </div>
-
-                    {% if job.status != 'Completed' %}
-                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase py-3 rounded-lg transition">Update Sheet</button>
-                    {% endif %}
-                </form>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Liquid Bank Assets (10100)</span>
+                <span class="text-2xl font-black font-mono text-emerald-400">LKR {{ "{:,.2f}".format(cash) }}</span>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-emerald-500/50"></div>
             </div>
-
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
-                <h2 class="text-md font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-3 mb-4">2. Material Allocation</h2>
-                {% if job.status != 'Completed' %}
-                <form method="POST" class="flex gap-4">
-                    <input type="hidden" name="action" value="allocate_part">
-                    <select name="sku" class="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none" required>
-                        <option value="">-- Select Material --</option>
-                        {% for sku, item in inventory.items() %}
-                        <option value="{{ sku }}" {% if item.stock <= 0 %}disabled{% endif %}>{{ item.name }} (Stock: {{ item.stock }})</option>
-                        {% endfor %}
-                    </select>
-                    <input type="number" name="qty" value="1" min="1" class="w-16 bg-slate-900 border border-slate-800 text-center font-bold text-xs rounded">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase px-4 rounded transition">Release</button>
-                </form>
-                {% else %}
-                <p class="text-xs font-mono text-slate-500">Locked.</p>
-                {% endif %}
-                
-                <div class="mt-4 space-y-2">
-                    {% for p in job.parts_used %}
-                    <div class="text-xs font-mono bg-slate-900 p-2 rounded border border-slate-800 flex justify-between">
-                        <span class="text-slate-400">{{ p.qty }}x {{ inventory[p.sku].name }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Stock Asset Value (12000)</span>
+                <span class="text-2xl font-black font-mono text-blue-400">LKR {{ "{:,.2f}".format(assets) }}</span>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-blue-500/50"></div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Gross Invoiced Yield (40000)</span>
+                <span class="text-2xl font-black font-mono text-purple-400">LKR {{ "{:,.2f}".format(revenue) }}</span>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-purple-500/50"></div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Plant Floor Capacity</span>
+                <span class="text-2xl font-black font-mono text-amber-400">{{ active_jobs }} Repair Bays</span>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-amber-500/50"></div>
             </div>
         </div>
 
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl h-fit space-y-6">
-            <div class="text-center border-b border-slate-800 pb-4">
-                <h3 class="text-md font-black uppercase text-white tracking-widest">Enterprise Invoice</h3>
-            </div>
-            <div class="space-y-3 text-xs">
-                <div class="flex justify-between border-b border-slate-900 pb-2">
-                    <span class="text-slate-500">Material Cost Summary</span>
-                    <span class="font-mono text-slate-300">LKR {{ "{:,.2f}".format(parts_cost) }}</span>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4 flex justify-between">
+                        Workshop Floor Queue
+                        <span class="text-xs text-slate-500 font-mono">Module 12: Visual Scheduling Active</span>
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead>
+                                <tr class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-900 border-b border-slate-800">
+                                    <th class="p-3">Reference ID</th>
+                                    <th class="p-3">Target License Plate</th>
+                                    <th class="p-3">Assigned Technician</th>
+                                    <th class="p-3">Bay Status</th>
+                                    <th class="p-3 text-right">Execution</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-900">
+                                {% for id, job in jobs.items() %}
+                                <tr class="hover:bg-slate-900/40 transition">
+                                    <td class="p-3 font-mono font-bold text-blue-400">{{ id }}</td>
+                                    <td class="p-3 font-mono text-xs text-slate-200">{{ job.vehicle }}</td>
+                                    <td class="p-3 text-xs">
+                                        {% if employees.get(job.technician_id) %}
+                                            {{ employees.get(job.technician_id)['name'] }}
+                                        {% else %}
+                                            Unassigned
+                                        {% endif %}
+                                    </td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {% if job.status=='Completed' %} bg-emerald-950 text-emerald-400 border border-emerald-800 {% else %} bg-amber-950 text-amber-400 border border-amber-800 {% endif %}">
+                                            {{ job.status }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-right">
+                                        <a href="/production/job/{{ id }}" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] uppercase px-3 py-1.5 rounded transition inline-block">Access Console</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="flex justify-between border-b border-slate-900 pb-2">
-                    <span class="text-slate-500">Operating Labor Expense</span>
-                    <span class="font-mono text-slate-300">LKR {{ "{:,.2f}".format(labor_cost) }}</span>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4 flex justify-between">
+                        Fleet Telematics & Predictive Maintenance
+                        <span class="text-xs text-slate-500 font-mono">Module 51: AI Engine Armed</span>
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if vehicles %}
+                            {% for plate, veh in vehicles.items() %}
+                            <div class="bg-slate-900 p-4 rounded-lg border border-slate-800 space-y-2 relative overflow-hidden">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-mono text-xs font-bold text-white bg-blue-900 border border-blue-700 px-2 py-0.5 rounded shadow">{{ plate }}</span>
+                                    <span class="text-[10px] text-slate-400 font-mono">VIN: {{ veh.vin }}</span>
+                                </div>
+                                <p class="text-xs text-slate-200 font-black">{{ veh.make }} {{ veh.model }}</p>
+                                <div class="flex justify-between items-end">
+                                    <p class="text-[11px] text-slate-400 font-mono">Odometer: <b class="text-slate-100">{{ "{:,}".format(veh.mileage|default(0)) }} KM</b></p>
+                                </div>
+                                <div class="border-t border-slate-800/60 pt-2 mt-2 space-y-1">
+                                    <span class="text-[9px] uppercase font-bold text-slate-500 block">System Diagnostic Flags</span>
+                                    {% if veh.dtc_fault_history %}
+                                        {% for fault in veh.dtc_fault_history %}
+                                        <div class="text-[10px] font-mono text-red-400 bg-red-950/30 border border-red-900/40 p-1.5 rounded flex justify-between items-center">
+                                            <span>⚠️ DTC {{ fault.code }}</span>
+                                            <span class="font-bold uppercase tracking-wider text-[8px] px-1 bg-red-800 text-white rounded">{{ fault.status }}</span>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="text-[10px] font-mono text-emerald-400 bg-emerald-950/30 border border-emerald-900/40 p-1.5 rounded">
+                                            ✔ No Faults Detected in Memory
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-xs text-slate-500 font-mono col-span-2">No active fleet telematics detected.</p>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="flex justify-between pt-2">
-                    <span class="font-bold text-slate-200">Total Settlement</span>
-                    <span class="font-mono font-black text-emerald-400 text-sm">LKR {{ "{:,.2f}".format(total_estimation) }}</span>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4 flex justify-between">
+                        Immutable Ledger Audit Stream
+                        <span class="text-xs text-slate-500 font-mono">Module 31: Double-Entry Active</span>
+                    </h2>
+                    <div class="space-y-2 max-h-56 overflow-y-auto pr-2 font-mono text-[11px]">
+                        {% if not journal_entries %}
+                        <p class="text-xs text-slate-500 text-center py-6">Awaiting workshop balance sheet sequences...</p>
+                        {% else %}
+                            {% for entry in journal_entries %}
+                            <div class="p-2.5 border border-slate-800 bg-slate-900/40 rounded-lg flex justify-between items-center mb-1.5 hover:bg-slate-900/80 transition">
+                                <div class="space-y-0.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-500">[{{ entry.timestamp }}]</span>
+                                        <strong class="text-blue-400 font-bold font-mono">{{ entry.reference }}</strong>
+                                        <span class="text-slate-600">|</span>
+                                        <span class="text-slate-400 text-[10px] bg-slate-800 px-2 py-0.5 rounded">GL: {{ entry.account_code }}</span>
+                                    </div>
+                                    <p class="text-slate-400 text-[10px]">{{ entry.description }}</p>
+                                </div>
+                                <div class="text-right pl-4">
+                                    {% if entry.debit > 0 %}
+                                    <span class="text-emerald-400 font-bold">DR: {{ "{:,.2f}".format(entry.debit) }}</span>
+                                    {% else %}
+                                    <span class="text-purple-400 font-bold">CR: {{ "{:,.2f}".format(entry.credit) }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
-            {% if job.status != 'Completed' %}
-            <form action="/billing/invoice/{{ job_id }}" method="POST">
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase py-3 rounded-lg transition">Execute Posting</button>
-            </form>
-            {% else %}
-            <div class="bg-slate-900 text-emerald-400 text-xs text-center font-mono py-3 rounded-lg">✔ Settled.</div>
-            {% endif %}
+            <div class="space-y-6">
+                
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-md font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4 flex justify-between">
+                        Warehouse Reserves
+                        <span class="text-xs text-slate-500 font-mono">Module 69: Bin Sync</span>
+                    </h2>
+                    <div class="space-y-3">
+                        {% for sku, item in inventory.items() %}
+                        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center hover:bg-slate-900/60 transition relative overflow-hidden">
+                            {% if item.stock <= item.reorder %}
+                                <div class="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+                            {% else %}
+                                <div class="absolute left-0 top-0 bottom-0 w-1 bg-slate-700"></div>
+                            {% endif %}
+                            <div class="space-y-1 pl-2">
+                                <h4 class="text-xs font-bold text-slate-200">{{ item.name }}</h4>
+                                <div class="flex flex-col gap-0.5 font-mono text-[10px]">
+                                    <span class="text-slate-500">SKU: {{ sku }}</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-mono font-bold px-3 py-1 rounded-full inline-block tracking-wide {% if item.stock <= item.reorder %} bg-red-950 text-red-400 border border-red-800 {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                                    Qty: {{ item.stock }}
+                                </span>
+                                {% if item.stock <= item.reorder %}
+                                <span class="text-[9px] text-red-500 font-bold uppercase block mt-1 tracking-wider animate-pulse">Low Stock</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+                    <h2 class="text-md font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-2 flex justify-between">
+                        Stock Procurement
+                        <span class="text-xs text-slate-500 font-mono">Module 23: Auto-PO</span>
+                    </h2>
+                    <p class="text-[10px] text-slate-400 leading-relaxed mb-2">Notice: Pricing data access is strictly governed. Cost basis is calculated automatically via backend databases.</p>
+                    
+                    <form action="/supply_chain/procure" method="POST" class="space-y-4 text-xs">
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Target Material Component SKU</label>
+                            <select name="sku" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-blue-500 transition" required>
+                                <option value="">-- Select Inventory Target --</option>
+                                {% for sku, item in inventory.items() %}
+                                <option value="{{ sku }}">{{ item.name }} ({{ sku }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Intake Quantity Units</label>
+                            <input type="number" name="qty" min="1" value="1" class="w-full bg-slate-900 border border-slate-800 text-slate-100 rounded p-2 focus:outline-none focus:border-blue-500 font-bold font-mono transition" required>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] uppercase tracking-wider py-3 rounded-lg shadow-lg shadow-blue-900/20 transition">
+                            Process Restock & Update Ledger
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+                    <h2 class="text-md font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-2 flex justify-between">
+                        Compliance Monitors
+                        <span class="text-xs text-slate-500 font-mono">Module 58 & 96</span>
+                    </h2>
+                    <div class="flex justify-between items-center text-xs p-3 bg-slate-900 border border-slate-800 rounded">
+                        <span class="text-slate-400">Hazardous Waste Oil Tank</span>
+                        <span class="text-amber-400 font-mono font-bold">64% Capacity</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs p-3 bg-slate-900 border border-slate-800 rounded">
+                        <span class="text-slate-400">Paint Booth VOC Emissions</span>
+                        <span class="text-emerald-400 font-mono font-bold">Safe (0.02 ppm)</span>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </main>
 </body>
