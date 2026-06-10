@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Enterprise Resource Control Matrix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GT AutoMech ERP - Control Matrix</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
@@ -10,12 +11,12 @@
     <header class="border-b border-slate-800 bg-slate-950 p-6 shadow-2xl">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-black uppercase tracking-wider text-white">Apex Mechanics Enterprise</h1>
-                <p class="text-xs text-emerald-400 font-mono">Unified Global Core ERP System • Production Standard v6.0</p>
+                <h1 class="text-2xl font-black uppercase tracking-wider text-white">GT AutoMech (PVT) Ltd</h1>
+                <p class="text-xs text-emerald-400 font-mono">Enterprise Resource Planning Matrix • Raigama, Bandaragama</p>
             </div>
             <div class="bg-slate-900 px-4 py-2 rounded-lg border border-slate-800 text-right">
-                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-widest">Global Master Audit Log</span>
-                <span class="text-xs font-mono text-slate-200">Reconciled Clean • Database: Connected</span>
+                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-widest">Core Database Infrastructure</span>
+                <span class="text-xs font-mono text-slate-200">✨ Firebase Firestore Live</span>
             </div>
         </div>
     </header>
@@ -32,51 +33,62 @@
             {% endif %}
         {% endwith %}
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
-                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">General Ledger Liquid Asset (10100)</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Liquid Cash Reserves (10100)</span>
                 <span class="text-2xl font-black font-mono text-emerald-400">LKR {{ "{:,.2f}".format(cash) }}</span>
+                <div class="absolute bottom-0 left-0 h-1 w-full bg-emerald-500 transform scale-x-0 group-hover:scale-x-100 transition duration-300"></div>
             </div>
-            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
-                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Inventory Capitalization Value (12000)</span>
+
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Warehouse Asset Value (12000)</span>
                 <span class="text-2xl font-black font-mono text-blue-400">LKR {{ "{:,.2f}".format(assets) }}</span>
+                <div class="absolute bottom-0 left-0 h-1 w-full bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition duration-300"></div>
             </div>
-            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
-                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Gross Realized Profits Ledger (40000)</span>
+
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Realized Workshop Revenue (40000)</span>
                 <span class="text-2xl font-black font-mono text-purple-400">LKR {{ "{:,.2f}".format(revenue) }}</span>
+                <div class="absolute bottom-0 left-0 h-1 w-full bg-purple-500 transform scale-x-0 group-hover:scale-x-100 transition duration-300"></div>
             </div>
-            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg">
-                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Active Plant Floors Queue</span>
-                <span class="text-2xl font-black font-mono text-amber-400">{{ active_jobs }} Jobs Active</span>
+
+            <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">Active Workshop Bays</span>
+                <span class="text-2xl font-black font-mono text-amber-400">{{ active_jobs }} Repair Cards</span>
+                <div class="absolute bottom-0 left-0 h-1 w-full bg-amber-500 transform scale-x-0 group-hover:scale-x-100 transition duration-300"></div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <div class="lg:col-span-2 space-y-6">
+                
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
-                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">Operations & Job Production Management</h2>
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4 flex justify-between items-center">
+                        <span>Vehicle Production & Repairs Pipeline</span>
+                        <span class="text-xs font-mono font-normal text-slate-500">Live Workshop Floor Monitor</span>
+                    </h2>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead>
                                 <tr class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-900 border-b border-slate-800">
-                                    <th class="p-3">Reference ID</th>
-                                    <th class="p-3">Asset Target</th>
-                                    <th class="p-3">Staff Resource</th>
-                                    <th class="p-3">Operational Status</th>
-                                    <th class="p-3 text-right">Execution</th>
+                                    <th class="p-3">Repair Reference</th>
+                                    <th class="p-3">Vehicle Plate No</th>
+                                    <th class="p-3">Assigned Mechanic</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-right">Control Action</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-900">
                                 {% for id, job in jobs.items() %}
-                                <tr class="hover:bg-slate-900/50">
+                                <tr class="hover:bg-slate-900/40 transition">
                                     <td class="p-3 font-mono font-bold text-blue-400">{{ id }}</td>
-                                    <td class="p-3 font-mono text-xs">{{ job.vehicle }}</td>
+                                    <td class="p-3 font-mono text-xs text-slate-200">{{ job.vehicle }}</td>
                                     <td class="p-3 text-xs">
                                         {% if employees.get(job.technician_id) %}
                                             {{ employees.get(job.technician_id)['name'] }}
                                         {% else %}
-                                            Unassigned Resource
+                                            Unassigned Floor Mechanic
                                         {% endif %}
                                     </td>
                                     <td class="p-3">
@@ -85,7 +97,7 @@
                                         </span>
                                     </td>
                                     <td class="p-3 text-right">
-                                        <a href="/production/job/{{ id }}" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-3 py-1.5 rounded transition">Access Console</a>
+                                        <a href="/production/job/{{ id }}" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-3 py-1.5 rounded transition inline-block">Manage Card</a>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -95,23 +107,29 @@
                 </div>
 
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
-                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">Live Balanced Ledger Entry Streams</h2>
-                    <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">
+                        General Ledger Double-Entry Stream <span class="text-xs font-mono font-normal text-slate-500">(Master Audit Log)</span>
+                    </h2>
+                    <div class="space-y-2 max-h-64 overflow-y-auto pr-2 font-mono text-[11px]">
                         {% if not journal_entries %}
-                        <p class="text-xs font-mono text-slate-500 text-center py-4">Waiting on transaction pipeline generation sequences...</p>
+                        <p class="text-xs text-slate-500 text-center py-6">Waiting on workshop transaction streams to balance financial matrix logs...</p>
                         {% else %}
                             {% for entry in journal_entries %}
-                            <div class="p-2 border-b border-slate-900 font-mono text-[11px] flex justify-between items-center bg-slate-900/30 rounded mb-1">
-                                <div>
-                                    <span class="text-slate-500">[{{ entry.timestamp }}]</span>
-                                    <strong class="text-blue-400 font-bold ml-1">{{ entry.reference }}</strong>
-                                    <p class="text-slate-400 text-[10px] mt-0.5">{{ entry.description }} (Account Code: {{ entry.account_code }})</p>
+                            <div class="p-3 border border-slate-800 bg-slate-900/40 rounded-lg flex justify-between items-center mb-2 hover:bg-slate-900/80 transition">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-500">[{{ entry.timestamp }}]</span>
+                                        <strong class="text-blue-400 font-bold font-mono">{{ entry.reference }}</strong>
+                                        <span class="text-slate-600">|</span>
+                                        <span class="text-slate-400 text-[10px] bg-slate-800 px-2 py-0.5 rounded">Acc: {{ entry.account_code }}</span>
+                                    </div>
+                                    <p class="text-slate-400 text-[10px] leading-relaxed">{{ entry.description }}</p>
                                 </div>
-                                <div class="text-right">
+                                <div class="text-right whitespace-nowrap pl-4">
                                     {% if entry.debit > 0 %}
-                                    <span class="text-emerald-400 font-bold">DR: LKR {{ "{:,.2f}".format(entry.debit) }}</span>
+                                    <span class="text-emerald-400 font-bold bg-emerald-950/40 px-2.5 py-1 rounded border border-emerald-900/30">DR: LKR {{ "{:,.2f}".format(entry.debit) }}</span>
                                     {% else %}
-                                    <span class="text-purple-400 font-bold">CR: LKR {{ "{:,.2f}".format(entry.credit) }}</span>
+                                    <span class="text-purple-400 font-bold bg-purple-950/40 px-2.5 py-1 rounded border border-purple-900/30">CR: LKR {{ "{:,.2f}".format(entry.credit) }}</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -122,18 +140,28 @@
             </div>
 
             <div class="space-y-6">
-                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl">
-                    <h2 class="text-md font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">Real-Time Inventory Reserves</h2>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl h-full">
+                    <h2 class="text-md font-bold uppercase tracking-wide text-white border-b border-slate-800 pb-3 mb-4">
+                        Spare Parts Inventory Reserves
+                    </h2>
                     <div class="space-y-3">
                         {% for sku, item in inventory.items() %}
-                        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center">
-                            <div>
+                        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center hover:bg-slate-900/60 transition">
+                            <div class="space-y-1">
                                 <h4 class="text-xs font-bold text-slate-200">{{ item.name }}</h4>
-                                <span class="text-[10px] font-mono text-slate-500">{{ sku }} • Price: LKR {{ "{:,.2f}".format(item.price) }}</span>
+                                <div class="flex flex-col gap-0.5 font-mono text-[10px]">
+                                    <span class="text-slate-500">SKU: {{ sku }}</span>
+                                    <span class="text-slate-400">Retail Rate: LKR {{ "{:,.2f}".format(item.price) }}</span>
+                                </div>
                             </div>
-                            <span class="text-xs font-mono font-bold px-2 py-1 rounded {% if item.stock <= item.reorder %} bg-red-950 text-red-400 border border-red-800 {% else %} bg-slate-800 text-slate-300 {% endif %}">
-                                Qty: {{ item.stock }}
-                            </span>
+                            <div class="text-right">
+                                <span class="text-xs font-mono font-bold px-3 py-1 rounded-full inline-block tracking-wide {% if item.stock <= item.reorder %} bg-red-950 text-red-400 border border-red-800 {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                                    Qty: {{ item.stock }}
+                                </span>
+                                {% if item.stock <= item.reorder %}
+                                <span class="text-[9px] text-red-500 font-bold uppercase block mt-1 tracking-wider animate-pulse">Low Stock</span>
+                                {% endif %}
+                            </div>
                         </div>
                         {% endfor %}
                     </div>
