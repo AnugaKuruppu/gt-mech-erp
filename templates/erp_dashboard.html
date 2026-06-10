@@ -15,7 +15,7 @@
             </div>
             <div class="bg-slate-900 px-4 py-2 rounded-lg border border-slate-800 text-right">
                 <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-widest">Global Master Audit Log</span>
-                <span class="text-xs font-mono text-slate-200">Reconciled Clean • Database: Connected</span>
+                <span class="text-xs font-mono text-slate-200">Reconciled Clean • Database: Firebase Connected</span>
             </div>
         </div>
     </header>
@@ -73,8 +73,8 @@
                                     <td class="p-3 font-mono font-bold text-blue-400">{{ id }}</td>
                                     <td class="p-3 font-mono text-xs">{{ job.vehicle }}</td>
                                     <td class="p-3 text-xs">
-                                        {% if employees[job.technician_id] %}
-                                            {{ employees[job.technician_id]['name'] }}
+                                        {% if employees.get(job.technician_id) %}
+                                            {{ employees.get(job.technician_id)['name'] }}
                                         {% else %}
                                             Unassigned Resource
                                         {% endif %}
