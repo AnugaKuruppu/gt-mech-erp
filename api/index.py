@@ -98,7 +98,6 @@ def execute_double_entry(description, reference, movements):
             new_balance = current_balance + debit - credit
             batch.update(acc_ref, {"balance": new_balance})
             
-            # Append entry document inside subcollection log trail
             log_ref = db.collection("journal_entries").document()
             batch.set(log_ref, {
                 "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -123,20 +122,16 @@ def global_dashboard():
     try:
         verify_and_seed_firebase()
         
-        # Load Accounts
         accounts = {doc.id: doc.to_dict() for doc in db.collection("chart_of_accounts").stream()}
         total_cash = accounts.get("10100", {}).get("balance", 0.0)
         total_revenue = accounts.get("40000", {}).get("balance", 0.0)
         
-        # Load Inventory
         inventory = {doc.id: doc.to_dict() for doc in db.collection("inventory").stream()}
         asset_valuation = sum(item.get("stock", 0) * item.get("cost", 0) for item in inventory.values())
         
-        # Load Jobs
         jobs = {doc.id: doc.to_dict() for doc in db.collection("job_cards").stream()}
         active_jobs_count = sum(1 for j in jobs.values() if j.get("status") != "Completed")
         
-        # Load Employees & Journal Entries
         employees = {doc.id: doc.to_dict() for doc in db.collection("employees").stream()}
         
         journal_docs = db.collection("journal_entries").order_by("timestamp", direction=firestore.Query.DESCENDING).stream()
@@ -182,10 +177,7 @@ def view_job_card(job_id):
                 part_data = part_snap.to_dict()
                 current_stock = part_data.get("stock", 0)
                 if current_stock >= qty:
-                    # Deduct from Stock
                     part_ref.update({"stock": current_stock - qty})
-                    
-                    # Append to job's parts list
                     current_parts = job.get("parts_used", [])
                     current_parts.append({"sku": sku, "qty": qty, "price": part_data["price"]})
                     job_ref.update({"parts_used": current_parts})
@@ -194,7 +186,6 @@ def view_job_card(job_id):
                     flash("Insufficient physical quantities available to process release.", "danger")
         return redirect(url_for('view_job_card', job_id=job_id))
 
-    # Computation Pass for templates
     inventory = {doc.id: doc.to_dict() for doc in db.collection("inventory").stream()}
     parts_cost = sum(p["qty"] * p["price"] for p in job.get("parts_used", []))
     
