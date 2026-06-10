@@ -12,24 +12,32 @@ app.secret_key = os.environ.get("SECRET_KEY", "free_forever_enterprise_secret_to
 db = None
 firebase_error = None
 
+# Track exactly what Vercel sees for diagnostic debugging
+raw_env_check = os.environ.get("FIREBASE_CREDENTIALS", "NOT_FOUND_AT_ALL")
+
 try:
     import firebase_admin
     from firebase_admin import credentials, firestore
 
-    # Read the Firebase Private Key JSON from environment variables
-    fb_creds_raw = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
+    fb_creds_raw = raw_env_check.strip()
 
-    if fb_creds_raw:
-        # Parse the raw JSON string into a Python Dictionary
-        cred_dict = json.loads(fb_creds_raw)
+    if fb_creds_raw and fb_creds_raw != "NOT_FOUND_AT_ALL":
+        try:
+            cred_dict = json.loads(fb_creds_raw)
+        except Exception:
+            fixed_raw = fb_creds_raw.replace('\n', '\\n')
+            cred_dict = json.loads(fixed_raw)
+
+        if "private_key" in cred_dict:
+            cred_dict["private_key"] = cred_dict["private_key"].replace('\\n', '\n')
+
         cred = credentials.Certificate(cred_dict)
-        # Prevent double initialization crashes in serverless functions
+        
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred)
     else:
-        # Local development fallback if environment variable isn't set yet
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app()
+        # If the environment variable is completely blank, raise a clear error to block standard boot
+        raise ValueError("Vercel environment variable 'FIREBASE_CREDENTIALS' is completely empty or missing from this runtime container.")
             
     db = firestore.client()
 
@@ -37,7 +45,6 @@ try:
     # AUTOMATED FIREBASE SEEDING LOGIC
     # ==============================================================================
     def verify_and_seed_firebase():
-        # Check if setup is already complete by looking for existing employee data
         emp_ref = db.collection("employees")
         if len(list(emp_ref.limit(1).stream())) == 0:
             
@@ -89,7 +96,6 @@ def execute_double_entry(description, reference, movements):
         raise ValueError("Ledger Imbalance! Debits must equal Credits exactly.")
     
     batch = db.batch()
-    
     for code, debit, credit in movements:
         acc_ref = db.collection("chart_of_accounts").document(str(code))
         acc_snap = acc_ref.get()
@@ -107,7 +113,6 @@ def execute_double_entry(description, reference, movements):
                 "debit": debit,
                 "credit": credit
             })
-            
     batch.commit()
 
 # ==============================================================================
@@ -117,7 +122,7 @@ def execute_double_entry(description, reference, movements):
 @app.route('/')
 def global_dashboard():
     if firebase_error:
-        return render_recovery_screen(firebase_error)
+        return render_recovery_screen(firebase_error, raw_env_check)
         
     try:
         verify_and_seed_firebase()
@@ -131,7 +136,6 @@ def global_dashboard():
         
         jobs = {doc.id: doc.to_dict() for doc in db.collection("job_cards").stream()}
         active_jobs_count = sum(1 for j in jobs.values() if j.get("status") != "Completed")
-        
         employees = {doc.id: doc.to_dict() for doc in db.collection("employees").stream()}
         
         journal_docs = db.collection("journal_entries").order_by("timestamp", direction=firestore.Query.DESCENDING).stream()
@@ -143,11 +147,11 @@ def global_dashboard():
                                accounts=accounts, employees=employees, journal_entries=journal_stream)
                                
     except Exception as run_err:
-        return render_recovery_screen(traceback.format_exc())
+        return render_recovery_screen(traceback.format_exc(), raw_env_check)
 
 @app.route('/production/job/<job_id>', methods=['GET', 'POST'])
 def view_job_card(job_id):
-    if firebase_error: return render_recovery_screen(firebase_error)
+    if firebase_error: return render_recovery_screen(firebase_error, raw_env_check)
     
     job_ref = db.collection("job_cards").document(job_id)
     job_snap = job_ref.get()
@@ -199,7 +203,7 @@ def view_job_card(job_id):
 
 @app.route('/billing/invoice/<job_id>', methods=['POST'])
 def finalize_and_invoice_job(job_id):
-    if firebase_error: return render_recovery_screen(firebase_error)
+    if firebase_error: return render_recovery_screen(firebase_error, raw_env_check)
     
     job_ref = db.collection("job_cards").document(job_id)
     job_snap = job_ref.get()
@@ -216,45 +220,4 @@ def finalize_and_invoice_job(job_id):
     inventory_cache = {doc.id: doc.to_dict() for doc in db.collection("inventory").stream()}
     
     for p in job.get("parts_used", []):
-        parts_cost += p["qty"] * p["price"]
-        cogs_valuation += p["qty"] * inventory_cache.get(p["sku"], {}).get("cost", 0.0)
-        
-    grand_total = parts_cost + labor_cost
-    
-    try:
-        execute_double_entry(
-            description=f"Automated Firebase settlement run for job card {job_id}",
-            reference=f"INV-{job_id}",
-            movements=[
-                (10100, grand_total, 0.00), (40000, 0.00, grand_total),
-                (50000, cogs_valuation, 0.00), (12000, 0.00, cogs_valuation),
-                (51000, labor_cost, 0.00), (10100, 0.00, labor_cost)
-            ]
-        )
-        job_ref.update({"status": "Completed"})
-        flash(f"Ledger balances updated successfully. Invoicing cycle ended.", "success")
-    except ValueError as e:
-        flash(f"Critical ledger failure: {str(e)}", "danger")
-
-    return redirect(url_for('global_dashboard'))
-
-def render_recovery_screen(stack_trace):
-    return f"""
-    <div style="background:#0f172a; color:#f87171; padding:2.5rem; font-family:monospace; border-radius:12px; max-width:850px; margin:3rem auto; border:1px solid #1e293b;">
-        <h2 style="color:#ef4444; margin-top:0; font-weight:900;">⚠️ FIREBASE ENGINE CONTEXT ERROR</h2>
-        <p style="color:#94a3b8; font-size:0.9rem;">The Firebase connection key is missing or invalid. Follow the instructions below to attach it:</p>
-        <pre style="background:#020617; color:#4ade80; padding:1.5rem; overflow-x:auto; border:1px solid #334155; border-radius:8px; font-size:0.8rem;">{stack_trace}</pre>
-        <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid #1e293b;">
-            <h4 style="color:#fff; margin:0 0 0.5rem 0;">💡 Quick Resolution Manual:</h4>
-            <ol style="color:#cbd5e1; font-size:0.85rem; line-height:1.6; margin:0; padding-left:1.2rem;">
-                <li>Open your downloaded Firebase private key json file and copy the entire text structure inside.</li>
-                <li>Go to <b>Vercel Settings</b> &rarr; <b>Environment Variables</b>.</li>
-                <li>Create a variable with Key: <b style="color:#fff;">FIREBASE_CREDENTIALS</b> and paste the complete JSON text as the value.</li>
-                <li>Click Save, go to the <b>Deployments</b> tab, and click <b>Redeploy</b>.</li>
-            </ol>
-        </div>
-    </div>
-    """
-
-if __name__ == '__main__':
-    app.run(debug=True, port=8000)
+        parts
